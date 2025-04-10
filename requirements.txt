@@ -2,7 +2,8 @@
 streamlit
 selenium
 yt-dlp
-undetected-chromedriver
+chromedriver-autoinstaller
+
 
 # Common utilities
 asyncio
