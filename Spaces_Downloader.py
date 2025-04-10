@@ -4,7 +4,7 @@ import datetime
 import subprocess
 from playwright.async_api import async_playwright
 
-async def login_to_x(username, password, mfa_code=None)
+async def login_to_x(username, password, mfa_code=None):
     async with async_playwright() as p
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context()
