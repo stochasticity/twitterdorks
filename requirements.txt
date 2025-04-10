@@ -1,0 +1,11 @@
+# Core dependencies
+streamlit
+playwright
+yt-dlp
+
+# Common utilities
+asyncio
+requests
+
+# Only needed for some logging or handling subprocess outputs
+rich
