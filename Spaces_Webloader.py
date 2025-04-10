@@ -3,20 +3,24 @@ import subprocess
 import streamlit as st
 import os
 import time
-import undetected_chromedriver as uc
+import chromedriver_autoinstaller
+from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 # ---- Login Function ----
 def login_to_x(username, password, mfa_code=None):
-    options = uc.ChromeOptions()
-    options.headless = True
+    chromedriver_autoinstaller.install()  # Auto-installs compatible chromedriver
+
+    options = Options()
+    options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
 
-    driver = uc.Chrome(options=options)
+    driver = webdriver.Chrome(options=options)
 
     try:
         driver.get("https://x.com/i/flow/login")
