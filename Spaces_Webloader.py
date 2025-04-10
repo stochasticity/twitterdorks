@@ -3,6 +3,25 @@ import datetime
 import subprocess
 import streamlit as st
 from playwright.async_api import async_playwright
+import os
+import subprocess
+import sys
+
+# Function to install Playwright browsers
+def install_playwright_browsers():
+    try:
+        import playwright
+        # Check if the browsers are already installed
+        if not os.path.exists(os.path.expanduser("~/.cache/ms-playwright")):
+            print("Installing Playwright browsers...")
+            subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
+        else:
+            print("Playwright browsers are already installed.")
+    except ImportError:
+        print("Playwright is not installed. Please ensure it's listed in your requirements.txt.")
+
+# Call the function to install browsers
+install_playwright_browsers()
 
 # ---- Async login function ----
 async def login_to_x(username, password, mfa_code=None):
