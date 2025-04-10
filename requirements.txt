@@ -1,11 +1,13 @@
 # Core dependencies
 streamlit
-playwright
+selenium
 yt-dlp
+undetected-chromedriver
 
 # Common utilities
 asyncio
 requests
+
 
 # Only needed for some logging or handling subprocess outputs
 rich
