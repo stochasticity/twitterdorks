@@ -33,37 +33,47 @@ async def login_to_x(username, password, mfa_code=None):
             browser = await p.chromium.launch(headless=True)
             context = await browser.new_context()
             page = await context.new_page()
-            
-            # Diagnostic snapshot capture
+
+            await page.goto("https://x.com/i/flow/login")
+
+            # Save HTML snapshot for debugging
             html_snapshot = await page.content()
             with open("page_debug.html", "w", encoding="utf-8") as f:
-                 f.write(html_snapshot)
-            st.warning("⚠️ Unexpected login screen. Saved page_debug.html for inspection.")
-            await page.goto("https://x.com/i/flow/login")
-            #await page.wait_for_selector("input[name='text']", timeout=20000)
-            # After username is entered and "Next" clicked
+                f.write(html_snapshot)
+            # Optional screenshot
+            # await page.screenshot(path="debug.png")
+            st.warning("⚠️ Saved page_debug.html for inspection after landing on login page.")
+
+            # Try to fill username
+            try:
+                await page.wait_for_selector("input[name='text']", timeout=15000)
+                await page.fill("input[name='text']", username)
+                await page.click("div[role='button']:has-text('Next')")
+                st.success("✅ Username entered and Next clicked.")
+            except Exception as e:
+                st.error(f"Login failed during initial username entry: {e}")
+                return False
+
+            # Handle confirmation step
             try:
                 await page.wait_for_selector("input[name='password']", timeout=10000)
             except:
-            # Handle possible username confirmation step
                 try:
                     confirm_input = await page.wait_for_selector("input[name='text']", timeout=10000)
                     await confirm_input.fill(username)
-                    await page.click("button:has-text('Next'), div[role='button']:has-text('Next')")
+                    await page.click("div[role='button']:has-text('Next')")
                     st.info("🔁 Username confirmation step handled.")
                     await page.wait_for_selector("input[name='password']", timeout=10000)
                 except Exception as e:
                     st.error(f"Login failed during username confirmation step: {e}")
                     return False
-            await page.fill("input[name='text']", username)
-            await page.click("button:has-text('Next')")
-            st.success("✅ Username entered and Next clicked.")
 
-            await page.wait_for_selector("input[name='password']", timeout=20000)
+            # Password step
             await page.fill("input[name='password']", password)
-            await page.click("button:has-text('Log in')")
+            await page.click("div[role='button']:has-text('Log in')")
             st.success("✅ Password entered and Log in clicked.")
 
+            # MFA (if needed)
             if mfa_code:
                 try:
                     mfa_input = await page.wait_for_selector("input[data-testid='ocfEnterTextTextInput']", timeout=60000)
