@@ -4,11 +4,15 @@ import subprocess
 import streamlit as st
 from playwright.async_api import async_playwright
 import os
+import sys
 
-# ---- Define relative-safe paths ----
-DATA_DIR = "downloads"
+# ---- Must be FIRST Streamlit command ----
+st.set_page_config(page_title="TwitterX Spaces Downloader", page_icon="🎙️")
+
+# ---- Set up output paths ----
+DATA_DIR = os.getcwd()
 COOKIES_PATH = os.path.join(DATA_DIR, "cookies.txt")
-os.makedirs(DATA_DIR, exist_ok=True)
+#os.makedirs(DATA_DIR, exist_ok=True)
 
 # ---- Install Playwright Browsers (only if needed) ----
 if not os.path.exists(os.path.expanduser("~/.cache/ms-playwright")):
