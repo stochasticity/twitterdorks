@@ -5,28 +5,16 @@ import streamlit as st
 from playwright.async_api import async_playwright
 import os
 import nest_asyncio
-<<<<<<< HEAD
 import threading
 import shutil
 import zipfile
-=======
->>>>>>> 74f8f5f2dfe2df2ff1feb002da8c20644ce706e4
 
 nest_asyncio.apply()
 st.set_page_config(page_title="TwitterX Spaces Downloader", page_icon="🎹")
 
-<<<<<<< HEAD
 DATA_DIR = os.getcwd()
 COOKIES_PATH = os.path.join(DATA_DIR, "cookies.txt")
 
-=======
-st.set_page_config(page_title="TwitterX Spaces Downloader", page_icon="🎙️")
-
-DATA_DIR = os.getcwd()
-COOKIES_PATH = os.path.join(DATA_DIR, "cookies.txt")
-
-# ---- Install Playwright if needed ----
->>>>>>> 74f8f5f2dfe2df2ff1feb002da8c20644ce706e4
 if not os.path.exists(os.path.expanduser("~/.cache/ms-playwright")):
     try:
         subprocess.run(["playwright", "install", "chromium"], check=True)
@@ -41,26 +29,12 @@ async def login_to_x(username, password, mfa_code=None, challenge_value=None):
             context = await browser.new_context()
             page = await context.new_page()
 
-            await page.goto("https://x.com/i/flow/login", timeout=60000)
-
-            # Capture the landing page for debug
-            html_snapshot = await page.content()
-            with open("page_debug.html", "w", encoding="utf-8") as f:
-                f.write(html_snapshot)
-            st.warning("⚠️ Saved page_debug.html for inspection after landing on login page.")
-
-            await page.wait_for_selector("input[name='text']", timeout=15000)
+            await page.goto("https://x.com/i/flow/login")
+            await page.wait_for_selector("input[name='text']", timeout=20000)
             await page.fill("input[name='text']", username)
-
-            # Fallback attempts to click Next button
-            try:
-                await page.click("div[role='button']:has-text('Next')", timeout=5000)
-            except:
-                await page.click("//div[contains(text(), 'Next') and @role='button']", timeout=5000)
-
+            await page.click("button:has-text('Next')")
             st.success("✅ Username entered and Next clicked.")
 
-<<<<<<< HEAD
             try:
                 await page.wait_for_selector("input[name='password']", timeout=8000)
             except:
@@ -97,29 +71,8 @@ async def login_to_x(username, password, mfa_code=None, challenge_value=None):
                         await page.screenshot(path="challenge_no_password.png")
                         return False
 
-=======
-            # Try password input next
-            try:
-                await page.wait_for_selector("input[name='password']", timeout=10000)
-            except:
-                try:
-                    confirm_input = await page.wait_for_selector("input[name='text']", timeout=10000)
-                    await confirm_input.fill(username)
-                    await page.click("div[role='button']:has-text('Next')", timeout=5000)
-                    st.info("🔁 Username confirmation step handled.")
-                    await page.wait_for_selector("input[name='password']", timeout=10000)
-                except Exception as e:
-                    st.error(f"Login failed during username confirmation step: {e}")
-                    return False
-
->>>>>>> 74f8f5f2dfe2df2ff1feb002da8c20644ce706e4
             await page.fill("input[name='password']", password)
-
-            try:
-                await page.click("div[role='button']:has-text('Log in')", timeout=5000)
-            except:
-                await page.click("//div[contains(text(), 'Log in') and @role='button']", timeout=5000)
-
+            await page.click("button:has-text('Log in')")
             st.success("✅ Password entered and Log in clicked.")
 
             if mfa_code:
