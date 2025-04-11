@@ -9,6 +9,12 @@ import threading
 import shutil
 import zipfile
 
+#
+#    TODO's: Still have to post example URL's for both Twitter and Youtube (and any other services this will work on)
+#    Need to fix Login flow / Arkose Labs CAPTCHA challenge
+#    
+#
+
 nest_asyncio.apply()
 st.set_page_config(page_title="TwitterX Spaces Downloader", page_icon="🎹")
 
