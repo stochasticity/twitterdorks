@@ -118,8 +118,11 @@ if submit:
     if not username or not password or not space_url:
         st.warning("Please enter all required fields.")
     else:
-        with st.spinner("Logging in and downloading space..."):
-            loop = asyncio.get_event_loop()
-            result = loop.run_until_complete(login_to_x(username, password, mfa_code))
-            if result:
+        async def orchestrate():
+            success = await login_to_x(username, password, mfa_code)
+            if success:
                 download_twitter_space(space_url)
+
+        with st.spinner("Logging in and downloading space..."):
+            asyncio.create_task(orchestrate())
+
