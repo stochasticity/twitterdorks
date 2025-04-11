@@ -5,6 +5,9 @@ import streamlit as st
 from playwright.async_api import async_playwright
 import os
 import sys
+import nest_asyncio
+nest_asyncio.apply()
+
 
 # ---- Must be FIRST Streamlit command ----
 st.set_page_config(page_title="TwitterX Spaces Downloader", page_icon="🎙️")
@@ -118,5 +121,6 @@ if submit:
         st.warning("Please enter all required fields.")
     else:
         with st.spinner("Logging in and downloading space..."):
-            if asyncio.run(login_to_x(username, password, mfa_code)):
-                download_twitter_space(space_url)
+            asyncio.run(login_to_x(username, password, mfa_code))
+            download_twitter_space(space_url)
+
