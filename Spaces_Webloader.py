@@ -6,6 +6,8 @@ from playwright.async_api import async_playwright
 import os
 import sys
 import nest_asyncio
+import threading
+
 nest_asyncio.apply()
 
 # ---- Must be FIRST Streamlit command ----
@@ -14,6 +16,8 @@ st.set_page_config(page_title="TwitterX Spaces Downloader", page_icon="🎙️")
 # ---- Set up output paths ----
 DATA_DIR = os.getcwd()
 COOKIES_PATH = os.path.join(DATA_DIR, "cookies.txt")
+# Uncomment the following line if you need to create the directory
+# os.makedirs(DATA_DIR, exist_ok=True)
 
 # ---- Install Playwright Browsers (only if needed) ----
 if not os.path.exists(os.path.expanduser("~/.cache/ms-playwright")):
@@ -102,7 +106,7 @@ def download_twitter_space(url):
             log_file.write("Command:\n" + ' '.join(command) + "\n\n")
             log_file.write("STDERR:\n" + result.stderr)
 
-# ---- Streamlit UI ----
+# ---- UI Elements ----
 st.title("🎙️ TwitterX Spaces Downloader")
 st.caption("Download Twitter Spaces with yt-dlp + Playwright + Streamlit")
 
@@ -113,16 +117,20 @@ with st.form("login_form"):
     space_url = st.text_input("Twitter Space URL", placeholder="https://x.com/i/spaces/1YpKklAePYBGj")
     submit = st.form_submit_button("Login & Download")
 
-# ---- Async Runner Wrapper for Streamlit ----
+# ---- Background Runner ----
+def run_download(url):
+    download_twitter_space(url)
+
 if submit:
     if not username or not password or not space_url:
         st.warning("Please enter all required fields.")
     else:
-        async def orchestrate():
-            success = await login_to_x(username, password, mfa_code)
-            if success:
-                download_twitter_space(space_url)
-
-        with st.spinner("Logging in and downloading space..."):
-            asyncio.create_task(orchestrate())
-
+        with st.spinner("Logging in..."):
+            # Run the login coroutine in the current event loop
+            loop = asyncio.get_event_loop()
+            login_success = loop.run_until_complete(login_to_x(username, password, mfa_code))
+        if login_success:
+            st.info("Login successful. Starting download in the background...")
+            # Offload the download process to a background thread
+            download_thread = threading.Thread(target=run_download, args=(space_url,))
+            download_thread.start()
