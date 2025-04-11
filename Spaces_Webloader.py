@@ -5,8 +5,8 @@ import streamlit as st
 from playwright.async_api import async_playwright
 import os
 
-# ---- Set up cache-safe output path ----
-DATA_DIR = "/mount/data"
+# ---- Define relative-safe paths ----
+DATA_DIR = "downloads"
 COOKIES_PATH = os.path.join(DATA_DIR, "cookies.txt")
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -114,6 +114,5 @@ if submit:
         st.warning("Please enter all required fields.")
     else:
         with st.spinner("Logging in and downloading space..."):
-            success = asyncio.run(login_to_x(username, password, mfa_code))
-            if success:
+            if asyncio.run(login_to_x(username, password, mfa_code)):
                 download_twitter_space(space_url)
