@@ -16,6 +16,14 @@ DATA_DIR = os.getcwd()
 COOKIES_PATH = os.path.join(DATA_DIR, "cookies.txt")
 download_result = {}
 
+# --- Cleanup previous archives ---
+for file in os.listdir(DATA_DIR):
+    if file.startswith("twitter_space_") and file.endswith(".zip"):
+        try:
+            os.remove(os.path.join(DATA_DIR, file))
+        except Exception:
+            pass
+
 if not os.path.exists(os.path.expanduser("~/.cache/ms-playwright")):
     try:
         subprocess.run(["playwright", "install", "chromium"], check=True)
@@ -148,7 +156,6 @@ async def async_download_twitter_space(url):
     else:
         st.error("❌ Download failed.")
         st.text(stderr.decode())
-
         with open(os.path.join(DATA_DIR, "yt_dlp_error.log"), "w") as log_file:
             log_file.write("YT-DLP Debug Information\n\n")
             log_file.write("Command:\n" + ' '.join(command) + "\n\n")
