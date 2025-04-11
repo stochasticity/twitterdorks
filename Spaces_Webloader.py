@@ -14,6 +14,7 @@ st.set_page_config(page_title="TwitterX Spaces Downloader", page_icon="🎹")
 
 DATA_DIR = os.getcwd()
 COOKIES_PATH = os.path.join(DATA_DIR, "cookies.txt")
+download_result = {}
 
 if not os.path.exists(os.path.expanduser("~/.cache/ms-playwright")):
     try:
@@ -63,7 +64,7 @@ async def login_to_x(username, password, mfa_code=None, challenge_value=None):
                 except:
                     error_box = await page.query_selector("//div[contains(text(), 'Incorrect. Please try again.')]")
                     if error_box:
-                        st.error("❌ Challenge value rejected by Twitter. Please double-check your phone/email.")
+                        st.error("❌ Challenge value rejected by Twitter.")
                         await page.screenshot(path="challenge_incorrect_value.png")
                         return False
                     else:
@@ -112,8 +113,7 @@ async def async_download_twitter_space(url):
     zip_path = os.path.join(DATA_DIR, f"{base_filename}.zip")
 
     command = [
-        "yt-dlp",
-        "--verbose",
+        "yt-dlp", "--verbose",
         "--cookies", COOKIES_PATH,
         "--no-clean-info-json",
         "--write-info-json",
@@ -132,8 +132,6 @@ async def async_download_twitter_space(url):
 
     if process.returncode == 0:
         st.success("✅ Download successful.")
-        st.text(f"Saved to: {audio_path}")
-
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             if os.path.exists(audio_path):
                 zipf.write(audio_path, os.path.basename(audio_path))
@@ -143,13 +141,14 @@ async def async_download_twitter_space(url):
                 os.remove(info_path)
 
         if os.path.exists(zip_path):
-            st.session_state["zip_ready"] = zip_path
-            st.toast("📦 Download ready", icon="📁")
+            download_result["path"] = zip_path
+            download_result["name"] = os.path.basename(zip_path)
         else:
             st.error("⚠️ Archive missing after download.")
     else:
         st.error("❌ Download failed.")
         st.text(stderr.decode())
+
         with open(os.path.join(DATA_DIR, "yt_dlp_error.log"), "w") as log_file:
             log_file.write("YT-DLP Debug Information\n\n")
             log_file.write("Command:\n" + ' '.join(command) + "\n\n")
@@ -162,7 +161,6 @@ def start_background_loop(loop):
 background_loop = asyncio.new_event_loop()
 threading.Thread(target=start_background_loop, args=(background_loop,), daemon=True).start()
 
-# ---- Streamlit UI ----
 st.title("🎹 TwitterX Spaces Downloader")
 st.caption("Download Twitter Spaces with yt-dlp + Playwright + Streamlit")
 
@@ -171,6 +169,8 @@ if uploaded_cookie:
     with open(COOKIES_PATH, "wb") as out_file:
         out_file.write(uploaded_cookie.read())
     st.success("✅ Cookies uploaded. Login step will be skipped.")
+
+download_placeholder = st.empty()
 
 with st.form("login_form"):
     username = st.text_input("TwitterX Username", max_chars=100)
@@ -185,7 +185,8 @@ if submit:
         st.warning("Please enter the Space URL.")
     elif uploaded_cookie:
         st.success("🔐 Using uploaded cookies. Starting download...")
-        asyncio.run_coroutine_threadsafe(async_download_twitter_space(space_url), background_loop)
+        with st.spinner("Downloading..."):
+            asyncio.run(async_download_twitter_space(space_url))
     elif not username or not password:
         st.warning("Please enter username and password or upload cookies.")
     else:
@@ -193,14 +194,14 @@ if submit:
             login_success = asyncio.run(login_to_x(username, password, mfa_code, challenge_value))
         if login_success:
             st.info("Login successful. Starting download in background...")
-            asyncio.run_coroutine_threadsafe(async_download_twitter_space(space_url), background_loop)
+            with st.spinner("Downloading..."):
+                asyncio.run(async_download_twitter_space(space_url))
 
-# Show download button if zip is ready
-if "zip_ready" in st.session_state and os.path.exists(st.session_state["zip_ready"]):
-    with open(st.session_state["zip_ready"], "rb") as zf:
-        st.download_button(
-            label="📦 Download Archived Twitter Space",
+if "path" in download_result and os.path.exists(download_result["path"]):
+    with open(download_result["path"], "rb") as zf:
+        download_placeholder.download_button(
+            label="📆 Download Archived Twitter Space",
             data=zf,
-            file_name=os.path.basename(st.session_state["zip_ready"]),
+            file_name=download_result["name"],
             mime="application/zip"
         )
