@@ -28,6 +28,10 @@ if not os.path.exists(os.path.expanduser("~/.cache/ms-playwright")):
 
 # ---- Login Function ----
 async def login_to_x(username, password, mfa_code=None):
+    html_snapshot = await page.content()
+    with open("page_debug.html", "w", encoding="utf-8") as f:
+        f.write(html_snapshot)
+    st.warning("⚠️ Unexpected login screen. Saved page_debug.html for inspection.")
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
@@ -44,7 +48,7 @@ async def login_to_x(username, password, mfa_code=None):
                 try:
                     confirm_input = await page.wait_for_selector("input[name='text']", timeout=10000)
                     await confirm_input.fill(username)
-                    await page.click("div[role='button']:has-text('Next')")
+                    await page.click("button:has-text('Next'), div[role='button']:has-text('Next')")
                     st.info("🔁 Username confirmation step handled.")
                     await page.wait_for_selector("input[name='password']", timeout=10000)
                 except Exception as e:
