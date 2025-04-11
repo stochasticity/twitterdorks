@@ -6,8 +6,9 @@ from playwright.async_api import async_playwright
 import os
 import sys
 import nest_asyncio
+import threading
 
-# Apply nest_asyncio so that our event loops can be nested.
+# Allow nested event loops
 nest_asyncio.apply()
 
 # ---- Must be FIRST Streamlit command ----
@@ -16,7 +17,7 @@ st.set_page_config(page_title="TwitterX Spaces Downloader", page_icon="🎙️")
 # ---- Set up output paths ----
 DATA_DIR = os.getcwd()
 COOKIES_PATH = os.path.join(DATA_DIR, "cookies.txt")
-# Uncomment the next line if you need to create the directory.
+# Uncomment the next line if you need to create the directory:
 # os.makedirs(DATA_DIR, exist_ok=True)
 
 # ---- Install Playwright Browsers (only if needed) ----
@@ -77,11 +78,12 @@ async def login_to_x(username, password, mfa_code=None):
         st.error(f"Login failed: {e}")
         return False
 
-# ---- Download Function ----
-def download_twitter_space(url):
+# ---- Asynchronous Download Function ----
+async def async_download_twitter_space(url):
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     output_template = os.path.join(
-        DATA_DIR, f"twitter_space_{timestamp}_%(uploader)s_%(upload_date)s_%(id)s.%(ext)s"
+        DATA_DIR,
+        f"twitter_space_{timestamp}_%(uploader)s_%(upload_date)s_%(id)s.%(ext)s"
     )
 
     command = [
@@ -94,19 +96,35 @@ def download_twitter_space(url):
         "-o", output_template
     ]
 
+    # Display the command for reference
     st.code(" ".join(command), language="bash")
 
-    result = subprocess.run(command, capture_output=True, text=True)
-    if result.returncode == 0:
+    process = await asyncio.create_subprocess_exec(
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+
+    if process.returncode == 0:
         st.success("✅ Download successful.")
         st.text(f"Saved to: {output_template}")
     else:
         st.error("❌ Download failed.")
-        st.text(result.stderr)
+        st.text(stderr.decode())
         with open(os.path.join(DATA_DIR, "yt_dlp_error.log"), "w") as log_file:
             log_file.write("YT-DLP Debug Information\n\n")
-            log_file.write("Command:\n" + " ".join(command) + "\n\n")
-            log_file.write("STDERR:\n" + result.stderr)
+            log_file.write("Command:\n" + ' '.join(command) + "\n\n")
+            log_file.write("STDERR:\n" + stderr.decode())
+
+# ---- Background Event Loop for Async Tasks ----
+def start_background_loop(loop):
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
+
+# Create and start a background event loop in a separate thread.
+background_loop = asyncio.new_event_loop()
+threading.Thread(target=start_background_loop, args=(background_loop,), daemon=True).start()
 
 # ---- Streamlit UI ----
 st.title("🎙️ TwitterX Spaces Downloader")
@@ -123,7 +141,9 @@ if submit:
     if not username or not password or not space_url:
         st.warning("Please enter all required fields.")
     else:
-        with st.spinner("Logging in and downloading space..."):
+        with st.spinner("Logging in..."):
             login_success = asyncio.run(login_to_x(username, password, mfa_code))
-            if login_success:
-                download_twitter_space(space_url)
+        if login_success:
+            st.info("Login successful. Starting download in background...")
+            # Schedule the download coroutine in the background event loop.
+            asyncio.run_coroutine_threadsafe(async_download_twitter_space(space_url), background_loop)
