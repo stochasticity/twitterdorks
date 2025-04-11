@@ -6,27 +6,27 @@ from playwright.async_api import async_playwright
 import os
 import sys
 import nest_asyncio
-import threading
+import glob
 
 # Allow nested event loops
 nest_asyncio.apply()
 
-# ---- Must be FIRST Streamlit command ----
-st.set_page_config(page_title="TwitterX Spaces Downloader", page_icon="🎹")
+# ---- Streamlit Config ----
+st.set_page_config(page_title="TwitterX Spaces Downloader", page_icon="🎙️")
 
-# ---- Set up output paths ----
+# ---- Paths ----
 DATA_DIR = os.getcwd()
 COOKIES_PATH = os.path.join(DATA_DIR, "cookies.txt")
 
-# ---- Install Playwright Browsers (only if needed) ----
+# ---- Install Playwright (if missing) ----
 if not os.path.exists(os.path.expanduser("~/.cache/ms-playwright")):
     try:
         subprocess.run(["playwright", "install", "chromium"], check=True)
-        st.success("✅ Chromium installed successfully.")
+        st.success("✅ Chromium installed.")
     except Exception as e:
         st.error(f"❌ Playwright install failed: {e}")
 
-# ---- Async Login Function ----
+# ---- Login Function ----
 async def login_to_x(username, password, mfa_code=None):
     try:
         async with async_playwright() as p:
@@ -52,7 +52,7 @@ async def login_to_x(username, password, mfa_code=None):
                     await page.click("button[data-testid='ocfEnterTextNextButton']")
                     st.success("✅ MFA code entered and Next clicked.")
                 except Exception as e:
-                    st.warning(f"⚠️ MFA not prompted or failed: {e}")
+                    st.warning(f"⚠️ MFA skipped or failed: {e}")
 
             await page.wait_for_timeout(5000)
 
@@ -76,72 +76,49 @@ async def login_to_x(username, password, mfa_code=None):
         st.error(f"Login failed: {e}")
         return False
 
-# ---- Asynchronous Download Function ----
-async def async_download_twitter_space(url):
+# ---- Download Twitter Space ----
+def download_twitter_space(url):
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"twitter_space_{timestamp}.m4a"  # UPDATED
-    output_path = os.path.join(DATA_DIR, filename)  # UPDATED
+    filename = f"twitter_space_{timestamp}.m4a"
+    output_path = os.path.join(DATA_DIR, filename)
 
     command = [
         "yt-dlp",
         "--verbose",
         "--cookies", COOKIES_PATH,
-        "--no-clean-info-json",
-        "--write-comments",
-        url,
-        "-o", output_path
+        "-o", output_path,
+        url
     ]
 
     st.code(" ".join(command), language="bash")
 
-    process = await asyncio.create_subprocess_exec(
-        *command,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-    stdout, stderr = await process.communicate()
-
-    if process.returncode == 0:
+    result = subprocess.run(command, capture_output=True)
+    if result.returncode == 0 and os.path.exists(output_path):
         st.success("✅ Download successful.")
-        st.text(f"Saved to: {output_path}")
-
-        # NEW: Show Streamlit download button
-        if os.path.exists(output_path):
-            with open(output_path, "rb") as f:
-                st.download_button("👅 Download Your File", f, file_name=filename)
+        st.text(f"File saved as: {filename}")
+        with open(output_path, "rb") as f:
+            st.download_button("⬇️ Download Audio File", f, file_name=filename, mime="audio/m4a")
     else:
         st.error("❌ Download failed.")
-        st.text(stderr.decode())
-        with open(os.path.join(DATA_DIR, "yt_dlp_error.log"), "w") as log_file:
-            log_file.write("YT-DLP Debug Information\n\n")
-            log_file.write("Command:\n" + ' '.join(command) + "\n\n")
-            log_file.write("STDERR:\n" + stderr.decode())
+        st.text(result.stderr.decode())
 
-# ---- Background Event Loop for Async Tasks ----
-def start_background_loop(loop):
-    asyncio.set_event_loop(loop)
-    loop.run_forever()
-
-background_loop = asyncio.new_event_loop()
-threading.Thread(target=start_background_loop, args=(background_loop,), daemon=True).start()
-
-# ---- Streamlit UI ----
-st.title("🎹 TwitterX Spaces Downloader")
+# ---- UI ----
+st.title("🎙️ TwitterX Spaces Downloader")
 st.caption("Download Twitter Spaces with yt-dlp + Playwright + Streamlit")
 
 with st.form("login_form"):
-    username = st.text_input("TwitterX Username", max_chars=100)
+    username = st.text_input("TwitterX Username")
     password = st.text_input("TwitterX Password", type="password")
-    mfa_code = st.text_input("MFA Code (if applicable)", max_chars=10)
+    mfa_code = st.text_input("MFA Code (if applicable)")
     space_url = st.text_input("Twitter Space URL", placeholder="https://x.com/i/spaces/1YpKklAePYBGj")
     submit = st.form_submit_button("Login & Download")
 
 if submit:
     if not username or not password or not space_url:
-        st.warning("Please enter all required fields.")
+        st.warning("Please fill in all required fields.")
     else:
         with st.spinner("Logging in..."):
             login_success = asyncio.run(login_to_x(username, password, mfa_code))
         if login_success:
-            st.info("Login successful. Starting download in background...")
-            asyncio.run_coroutine_threadsafe(async_download_twitter_space(space_url), background_loop)
+            st.info("Login successful. Starting download...")
+            download_twitter_space(space_url)
