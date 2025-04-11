@@ -102,7 +102,7 @@ def download_twitter_space(url):
             log_file.write("STDERR:\n" + result.stderr)
 
 # ---- Streamlit UI ----
-st.set_page_config(page_title="TwitterX Spaces Downloader", page_icon="🎙️")
+#st.set_page_config(page_title="TwitterX Spaces Downloader", page_icon="🎙️")
 st.title("🎙️ TwitterX Spaces Downloader")
 st.caption("Download Twitter Spaces with yt-dlp + Playwright + Streamlit")
 
