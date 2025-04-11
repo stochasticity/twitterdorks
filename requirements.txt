@@ -2,7 +2,7 @@
 streamlit
 selenium
 yt-dlp
-chromedriver-autoinstaller
+playwright
 
 
 # Common utilities
