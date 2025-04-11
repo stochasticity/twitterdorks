@@ -8,14 +8,12 @@ import sys
 import nest_asyncio
 nest_asyncio.apply()
 
-
 # ---- Must be FIRST Streamlit command ----
 st.set_page_config(page_title="TwitterX Spaces Downloader", page_icon="🎙️")
 
 # ---- Set up output paths ----
 DATA_DIR = os.getcwd()
 COOKIES_PATH = os.path.join(DATA_DIR, "cookies.txt")
-#os.makedirs(DATA_DIR, exist_ok=True)
 
 # ---- Install Playwright Browsers (only if needed) ----
 if not os.path.exists(os.path.expanduser("~/.cache/ms-playwright")):
@@ -105,7 +103,6 @@ def download_twitter_space(url):
             log_file.write("STDERR:\n" + result.stderr)
 
 # ---- Streamlit UI ----
-#st.set_page_config(page_title="TwitterX Spaces Downloader", page_icon="🎙️")
 st.title("🎙️ TwitterX Spaces Downloader")
 st.caption("Download Twitter Spaces with yt-dlp + Playwright + Streamlit")
 
@@ -116,11 +113,13 @@ with st.form("login_form"):
     space_url = st.text_input("Twitter Space URL", placeholder="https://x.com/i/spaces/1YpKklAePYBGj")
     submit = st.form_submit_button("Login & Download")
 
+# ---- Async Runner Wrapper for Streamlit ----
 if submit:
     if not username or not password or not space_url:
         st.warning("Please enter all required fields.")
     else:
         with st.spinner("Logging in and downloading space..."):
-            asyncio.run(login_to_x(username, password, mfa_code))
-            download_twitter_space(space_url)
-
+            loop = asyncio.get_event_loop()
+            result = loop.run_until_complete(login_to_x(username, password, mfa_code))
+            if result:
+                download_twitter_space(space_url)
